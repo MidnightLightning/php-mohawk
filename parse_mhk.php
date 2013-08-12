@@ -1,4 +1,13 @@
 <?php
+/**
+ * Parse a Mohawk file
+ *
+ * Usage: 
+ *   php parse_mhk.php [PATH TO MHK FILE]
+ *
+ * Creates an "output" folder, and creates a '*.tBMP' file for each tBMP resource found
+ */
+
 if (count($argv) < 2) exit("Need to specify an input data file\n");
 $src = $argv[1];
 if (!file_exists($src)) exit("Data file $src doesn't exist\n");

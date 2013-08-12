@@ -1,5 +1,12 @@
 <?php
-// find ./output -name '*.tBMP' -exec php parse_tBMP.php '{}' \;
+/**
+ * Parse an individual tBMP file
+ *
+ * Usage: 
+ *   php parse_tBMP.php [PATH TO TBMP FILE]
+ * For parsing all tBMP files in a folder (in OSX/Linux):
+ *   find ./output -name '*.tBMP' -exec php parse_tBMP.php '{}' \;
+ */
 
 if (count($argv) < 2) exit("Need to specify an input data file\n");
 $src = $argv[1];

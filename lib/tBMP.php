@@ -4,11 +4,18 @@
 
 require_once('pixArray.php');
 
+/**
+ * Parse a Mohawk tBMP (bitmap image) data stream
+ */
 class tBMP {
 	public function __construct(binParser $bin) {
 		$this->bin = $bin;
 	}
 	
+	/**
+	 * Parse the data stream and return an image
+	 * @return GD image resource (palette-based)
+	 */
 	function convert() {
 		$bin = $this->bin;
 		$bin->cursor = 0; // Reset
@@ -288,7 +295,11 @@ class tBMP {
 		return $this->_buildPng($img_data);
 	}
 	
-	private function _buildPng($img_data) {
+	/**
+	 * Convert a pixel array into an image
+	 * @return GD image resource (palette-based)
+	 */
+	private function _buildPng(PixArray $img_data) {
 		$x = 0;
 		$y = 0;
 		foreach($img_data as $i => $p) {
@@ -311,6 +322,11 @@ class tBMP {
 		return $this->img;
 	}
 	
+	/**
+	 * Copy data from a given point from the end of the current pixel array
+	 *
+	 * Mostly handled by the pixArray::ringCopy command, but if the size of the ring is odd, we need to pull another pixel value from the binary data held here
+	 */
 	private function _ringCopy($data, $start, $num) {
 		//echo "\nRing copy from $start back, for $num:\n";
 		$data->ringCopy($start, $num);
@@ -318,6 +334,12 @@ class tBMP {
 		return $data;
 	}
 	
+	/**
+	 * Debugging output
+	 *
+	 * A convenience function to build an image with the pixel data generated so far and show an error message before quitting.
+	 * Useful for debugging to see at what point in the image pixel sequence the script bailed.
+	 */
 	private function _failOut($message, $img_data) {
 		$im = $this->_buildPng($img_data);
 		echo "\n".$message."\n";
