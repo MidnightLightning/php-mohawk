@@ -6,6 +6,7 @@ require_once('pixArray.php');
 
 /**
  * Parse a Mohawk tBMP (bitmap image) data stream
+ * @TODO import a PNG-8 and convert to tBMP
  */
 class tBMP {
 	public function __construct(binParser $bin) {

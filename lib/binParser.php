@@ -2,6 +2,7 @@
 
 /**
  * Utility class for dealing with binary data
+ * @TODO To maximize memory usage, the SplFileObject class (http://us3.php.net/manual/en/class.splfileobject.php) could be used to read the file directly, without having it all cached to memory
  */
 class binParser {
 	public $bin;
