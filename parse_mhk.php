@@ -5,7 +5,8 @@
  * Usage: 
  *   php parse_mhk.php [PATH TO MHK FILE]
  *
- * Creates an "output" folder, and creates a '*.tBMP' file for each tBMP resource found
+ * Creates an "output" folder, and creates a '*.tBMP' file for each tBMP resource found,
+ * and a '*.WDIB' file for each WDIB resource found
  */
 
 if (count($argv) < 2) exit("Need to specify an input data file\n");
@@ -101,6 +102,10 @@ for ($i=0; $i<$num; $i++) {
 			echo "Resource $index ({$r['type']}): {$r['name']}\n";
 			//echo "\toffset: {$r['offset']}, size: {$r['size']}\n";
 			file_put_contents('output/'.$r['name'].'.tBMP', pack('H*', substr($bin->bin, $r['offset']*2, $r['size']*2)));
+		} elseif ($type['name'] == 'WDIB') {
+			echo "Resource $index ({$r['type']}): {$r['name']}\n";
+			//echo "\toffset: {$r['offset']}, size: {$r['size']}\n";
+			file_put_contents('output/'.$index.'.WDIB', pack('H*', substr($bin->bin, $r['offset']*2, $r['size']*2)));
 		}
 	}
 	$bin->cursor = $prior; // Restore
