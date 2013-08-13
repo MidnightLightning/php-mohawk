@@ -2,7 +2,7 @@
 /**
  * Parse an individual tBMP file
  *
- * Usage: 
+ * Usage:
  *   php parse_tBMP.php [PATH TO TBMP FILE]
  * For parsing all tBMP files in a folder (in OSX/Linux):
  *   find ./output -name '*.tBMP' -exec php parse_tBMP.php '{}' \;

@@ -1,5 +1,12 @@
 <?php
-// find ./output -name '*.WDIB' -exec php parse_wdib.php '{}' \;
+/**
+ * Parse an individual WDIB file
+ *
+ * Usage:
+ *   php parse_wdib.php [PATH TO WDIB FILE]
+ * For parsing all WDIB files in a folder (in OSX/Linux):
+ *   find ./output -name '*.WDIB' -exec php parse_wdib.php '{}' \;
+ */
 
 if (count($argv) < 2) exit("Need to specify an input data file\n");
 $src = $argv[1];

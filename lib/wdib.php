@@ -4,6 +4,9 @@
 
 require_once('ringArray.php');
 
+/**
+ * Parse a Mohawk WDIB (bitmap image) data stream
+ */
 class wdib {
 	const LEN_BITS    = 6;
 	const MIN_STRING  = 3;
@@ -16,6 +19,10 @@ class wdib {
 		$this->bin = $bin;
 	}
 	
+	/**
+	 * Parse the data stream and return an image
+	 * @return string binary representation of the WDIB contents (likely a BMP file)
+	 */
 	function convert() {
 		$bin = $this->bin;
 		$bin->cursor = 0; // Reset
