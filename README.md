@@ -1,4 +1,4 @@
-PHP-MOHAWK
+PHP-Mohawk
 ==========
 This is a set of PHP scripts designed to parse ([MHWK/Mohawk archive](http://insidethelink.ortiche.net/wiki/index.php/Mohawk_archive_format)) files  from the Myst/Riven games from Cyan studios.
 

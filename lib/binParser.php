@@ -4,7 +4,7 @@
  * Utility class for dealing with binary data
  * @TODO To maximize memory usage, the SplFileObject class (http://us3.php.net/manual/en/class.splfileobject.php) could be used to read the file directly, without having it all cached to memory
  */
-class binParser {
+class binParser implements SeekableIterator {
 	public $bin;
 	
 	/**
@@ -23,6 +23,26 @@ class binParser {
 	public function __construct($bin) {
 		$this->bin = $bin;
 		$this->cursor = 0;
+	}
+	
+	public function current() {
+		return $this->get(1);
+	}
+	public function key() {
+		return $this->cursor;
+	}
+	public function next() {
+		++$this->cursor;
+	}
+	public function rewind() {
+		$this->cursor = 0;
+	}
+	public function valid() {
+		return ($this->cursor*2 < strlen($this->bin));
+	}
+	public function seek($offset) {
+		if ($offset*2 > strlen($this->bin)) throw new OutOfBoundsException();
+		$this->cursor = $offset;
 	}
 	
 	/**
