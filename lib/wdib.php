@@ -92,13 +92,15 @@ class wdib {
 					$found = true;
 					$place++;
 					$l = 4;
-					while(true) {
+					while($l <= self::MAX_STRING) {
 						if ($bin->getHex($l) !== substr($ringStr, $o*2, $l*2)) break;
 						$l++;
 					}
 					$l--;
 					echo "Match found at $o for $l bytes\n";
-					$suffix .= sprintf('%04X', (($l - self::MIN_STRING) << self::POS_BITS) | ($o - self::MAX_STRING));
+					$o = $o - self::MAX_STRING;
+					if ($o < 0) $o += self::CBUFFERSIZE;
+					$suffix .= sprintf('%04X', (($l - self::MIN_STRING) << self::POS_BITS) | $o);
 					for ($i=0; $i<$l; $i++) { // Add those bytes to the ring
 						$ring->push($bin->byte());
 					}
@@ -121,6 +123,7 @@ class wdib {
 				}
 			}
 			$out .= sprintf('%02X', $cmd & 0xff) . $suffix;
+			//if ($bin->key() > 100) break;
 		}
 		return $out;
 	}

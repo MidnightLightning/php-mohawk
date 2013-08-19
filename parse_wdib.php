@@ -13,8 +13,14 @@ $src = $argv[1];
 if (!file_exists($src)) exit("Data file $src doesn't exist\n");
 
 echo "Parsing WDIB file $src...";
+
+if (count($argv) >= 3) {
+	$format = strtolower($argv[2]);
+} else {
+	$format = 'png';
+}
 $dir = pathinfo($src);
-if (file_exists($dir['dirname'].'/'.$dir['filename'].'.png')) exit("Exists\n");
+if (file_exists($dir['dirname'].'/'.$dir['filename'].'.'.$format)) exit("Exists\n");
 
 require('lib/binParser.php');
 require('lib/wdib.php');
@@ -25,7 +31,10 @@ $bin = new binParser($bin[1]);
 $r = new wdib($bin);
 $im_bmp = $r->convert(); // Extract the BMP data
 
-//file_put_contents($dir['dirname'].'/'.$dir['filename'].'.bmp', $im); // Save as BMP
+if ($format == 'bmp') {
+	file_put_contents($dir['dirname'].'/'.$dir['filename'].'.bmp', $im_bmp); // Save as BMP
+	exit;
+}
 
 // Parse the binary BMP data
 $FILE = unpack('vfile_type/Vfile_size/Vreserved/Vbitmap_offset', substr($im_bmp, 0, 14));
