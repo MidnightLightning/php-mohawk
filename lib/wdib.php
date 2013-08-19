@@ -25,12 +25,12 @@ class wdib {
 	 */
 	function convert() {
 		$bin = $this->bin;
-		$bin->cursor = 0; // Reset
+		$bin->rewind();
 		
 		$size = $bin->long();
 		$out = '';
-		$ring = new ringArray(1024);
-		while ($bin->cursor*2 < strlen($bin->bin)) {
+		$ring = new ringArray(self::CBUFFERSIZE);
+		while ($bin->key() < $bin->count()) {
 			//echo "Cursor: {$bin->cursor} of ".(strlen($bin->bin)/2)."\n";
 			$cmd = $bin->byte();
 			//echo "Command: $cmd (".decbin($cmd).")\n";
@@ -62,5 +62,66 @@ class wdib {
 			//echo "\n";
 		}
 		return pack('H*', $out);
+	}
+	
+	static function createFromBMP(binParser $bin) {
+		$bin->rewind();
+		$out = binParser::LElong($bin->count());
+		$ring = new ringArray(self::CBUFFERSIZE);
+		while ($bin->key() < $bin->count()) {
+			echo "Cursor at ".number_format($bin->key())." of ".number_format($bin->count())."...\n";
+			$cmd = 0;
+			$place = 0;
+			$suffix = '';
+			while ($place < 8) {
+				// See if there's a match at least 3 bytes long
+				$found = false;
+				$binStr = $bin->getHex(3);
+				$ringStr = $ring->toString();
+				$ringStr = $ringStr.$ringStr; // Double it, so the loop of it can be searched
+				$start = 0;
+				while(true) {
+					$o = strpos($ringStr, $binStr, $start);
+					if ($o === false) break; // No match found
+					if ($o % 2 !== 0) {
+						$start = $o+1;
+						continue;
+					}
+					// Match found; see how long it is
+					$o = $o/2; // Convert offset to bytes, not hex nibbles
+					$found = true;
+					$place++;
+					$l = 4;
+					while(true) {
+						if ($bin->getHex($l) !== substr($ringStr, $o*2, $l*2)) break;
+						$l++;
+					}
+					$l--;
+					echo "Match found at $o for $l bytes\n";
+					$suffix .= sprintf('%04X', (($l - self::MIN_STRING) << self::POS_BITS) | ($o - self::MAX_STRING));
+					for ($i=0; $i<$l; $i++) { // Add those bytes to the ring
+						$ring->push($bin->byte());
+					}
+					break;
+				}
+				if ($found === false) {
+					// Use absolute byte
+					$b = $bin->byte();
+					//echo "\nNo match found; using absolute byte for $b.\n";
+					$cmd = $cmd | (1 << $place); // Set place to 1
+					$place++;
+					$suffix .= sprintf('%02X', $b);
+					$ring->push($b);
+				}
+				if ($bin->key() >= $bin->count()) {
+					// Out of data to convert
+					while (!($cmd & 0x8000)) {
+						$cmd = $cmd << 1; // Add zeroes to the end
+					}
+				}
+			}
+			$out .= sprintf('%02X', $cmd & 0xff) . $suffix;
+		}
+		return $out;
 	}
 }

@@ -3,10 +3,10 @@
  * Custom class for handling a ring buffer of data
  *
  * This class has a private member that's a SplFixedArray, rather than extending SplFixedArray directly.
- * Doing it this way, the class is not Iterable (which is fine; it would go in a loop endlessly),
- * and several functions are just pass-through (with a filter to make sure the offset value is clean)
+ * The native SplFixedArray doesn't have a seek() method, so can't have the cursor set explicitly, so
+ * this class adds its own cursor, and uses that to implement the SeekableIterator interface
  */
-class ringArray implements ArrayAccess, Countable {
+class ringArray implements ArrayAccess, SeekableIterator, Countable {
 	private $buffer;
 	private $cursor;
 	
@@ -29,12 +29,11 @@ class ringArray implements ArrayAccess, Countable {
 		$this->cursor = $this->_loopOffset($this->cursor + 1);
 	}
 	
-	public function count() {
-		return $this->buffer->count();
-	}
-	
 	public function toArray() {
 		return $this->buffer;
+	}
+	public function toString() {
+		return $this->getSlice(0, $this->buffer->getSize());
 	}
 	
 	public function offsetExists($o) {
@@ -48,6 +47,43 @@ class ringArray implements ArrayAccess, Countable {
 	}
 	public function offsetUnset($o) {
 		return $this->buffer->offsetUnset($this->_loopOffset($o));
+	}
+	public function current() {
+		return $this->buffer->offsetGet($this->cursor);
+	}
+	public function key() {
+		return $this->cursor;
+	}
+	public function next() {
+		$this->cursor = $this->_loopOffset($this->cursor+1);
+	}
+	public function rewind() {
+		$this->cursor = 0;
+	}
+	public function valid() {
+		return ($this->key() < $this->count());
+	}
+	public function seek($o) {
+		$this->cursor = $this->_loopOffset($o);
+	}
+	public function count() {
+		return $this->buffer->count();
+	}
+	
+	/**
+	 * Grab string of bytes as Hex
+	 *
+	 * Return the hex string of bytes.
+	 * @param integer $start offset start
+	 * @param integer $length number of bytes to return; defaults to 1
+	 * @return string Hex string of bytes
+	 */
+	public function getSlice($start, $length = 1) {
+		$out = '';
+		for($i=$start; $i<$start+$length; $i++) {
+			$out .= sprintf('%02X', $this->buffer->offsetGet($i));
+		}
+		return $out;
 	}
 	
 	/**

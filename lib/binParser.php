@@ -4,7 +4,7 @@
  * Utility class for dealing with binary data
  * @TODO To maximize memory usage, the SplFileObject class (http://us3.php.net/manual/en/class.splfileobject.php) could be used to read the file directly, without having it all cached to memory
  */
-class binParser implements SeekableIterator {
+class binParser implements SeekableIterator, Countable {
 	public $bin;
 	
 	/**
@@ -38,18 +38,22 @@ class binParser implements SeekableIterator {
 		$this->cursor = 0;
 	}
 	public function valid() {
-		return ($this->cursor*2 < strlen($this->bin));
+		return ($this->key() < $this->count());
 	}
-	public function seek($offset) {
-		if ($offset*2 > strlen($this->bin)) throw new OutOfBoundsException();
-		$this->cursor = $offset;
+	public function seek($o) {
+		if ($o > $this->count()) throw new OutOfBoundsException();
+		$this->cursor = $o;
+	}
+	public function count() {
+		return strlen($this->bin)/2;
 	}
 	
 	/**
 	 * Grab bytes from current cursor
 	 *
 	 * Return the value of the next string of bytes at the cursor, converted to decimal as a big-endian byte string.
-	 * @param integer $bytes number of bytes to return; defaults to 1
+	 * @param integer $bytes Number of bytes to return; defaults to 1
+	 * @return integer Decimal interpretation of byte value
 	 */
 	public function get($bytes = 1) {
 		$hex = substr($this->bin, $this->cursor*2, $bytes*2);
@@ -57,8 +61,20 @@ class binParser implements SeekableIterator {
 	}
 	
 	/**
+	 * Grab bytes from the current cursor, as a hex string
+	 *
+	 * Return the hex string of bytes at the cursor.
+	 * @param integer $bytes number of bytes to return; defaults to 1
+	 * @return string Hex string of bytes
+	 */
+	public function getHex($bytes = 1) {
+		return substr($this->bin, $this->cursor*2, $bytes*2);
+	}
+	
+	/**
 	 * Get one byte (16-bits) of data from the current cursor
 	 * @param boolean $shift Should the cursor be incremented after this action? Defaults to 'true'
+	 * @return integer
 	 */
 	public function byte($shift = true) {
 		$rs = $this->get(1);
@@ -69,6 +85,7 @@ class binParser implements SeekableIterator {
 	/**
 	 * Get a "short" integer (two bytes; 32-bits) of data from the current cursor
 	 * @param boolean $shift Should the cursor be incremented after this action? Defaults to 'true'
+	 * @return integer
 	 */
 	public function short($shift = true) {
 		$rs = $this->get(2);
@@ -79,6 +96,7 @@ class binParser implements SeekableIterator {
 	/**
 	 * Get a "long" integer (four bytes; 64-bits) of data from the current cursor
 	 * @param boolean $shift Should the cursor be incremented after this action? Defaults to 'true'
+	 * @return integer
 	 */
 	public function long($shift = true) {
 		$rs = $this->get(4);
@@ -89,6 +107,7 @@ class binParser implements SeekableIterator {
 	/**
 	 * Get a null-terminated string, starting at the cursor
 	 * @param boolean $shift Should the cursor be incremented after this action? Defaults to 'true'
+	 * @return string
 	 */
 	public function str($shift = true) {
 		$str = '';
@@ -111,11 +130,24 @@ class binParser implements SeekableIterator {
 	/**
 	 * Get a "word" string (four bytes; 64-bits, converted to ASCII) from the current cursor
 	 * @param boolean $shift Should the cursor be incremented after this action? Defaults to 'true'
+	 * @return string
 	 */
 	public function word($shift = true) {
 		$hex = substr($this->bin, $this->cursor*2, 8);
 		$ascii = pack('H*', $hex);
 		if ($shift) $this->cursor += 4;
 		return $ascii;
+	}
+	
+	static function LEshort($i) {
+		return self::switchEndian(sprintf('%04X', $i));
+	}
+	static function LElong($i) {
+		return self::switchEndian(sprintf('%08X', $i));
+	}
+	
+	static function switchEndian($str) {
+		$a = str_split($str, 2);
+		return implode('', array_reverse($a));
 	}
 }
