@@ -139,13 +139,35 @@ class binParser implements SeekableIterator, Countable {
 		return $ascii;
 	}
 	
+	/**
+	 * Convert a number to little-endian
+	 *
+	 * Given a decimal number that was incorrectly-parsed as big-endian,
+	 * switch the bytes, so it's little-endian, and present as a short (two-byte) integer
+	 * @param int $i Integer to be parsed
+	 * @return string Hex-encoded string
+	 */
 	static function LEshort($i) {
 		return self::switchEndian(sprintf('%04X', $i));
 	}
+	
+	/**
+	 * Convert a number to little-endian
+	 *
+	 * Given a decimal number that was incorrectly-parsed as big-endian,
+	 * switch the bytes, so it's little-endian, and present as a long (four-byte) integer
+	 * @param int $i Integer to be parsed
+	 * @return string Hex-encoded string
+	 */
 	static function LElong($i) {
 		return self::switchEndian(sprintf('%08X', $i));
 	}
 	
+	/**
+	 * Given a hex string, reverse the bytes, changing the endian-ness
+	 * @param string $str The hex string to be parsed
+	 * @return string Hex-encoded string
+	 */
 	static function switchEndian($str) {
 		$a = str_split($str, 2);
 		return implode('', array_reverse($a));

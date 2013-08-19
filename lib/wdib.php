@@ -19,6 +19,12 @@ class wdib {
 		$this->bin = $bin;
 	}
 	
+	/**
+	 * Debug view for the WDIB file
+	 *
+	 * Because WDIB files are compressed in chunks of 8 commands, but each command might be more than one pixel,
+	 * this method echoes out the details of where those spans of commands are, for analyzing its effect on the final image
+	 */
 	function splay() {
 		$bin = $this->bin;
 		$bin->rewind();
@@ -59,6 +65,9 @@ class wdib {
 		}
 	}
 	
+	/**
+	 * Decorator function for the splay() method
+	 */
 	private function _hexOut($cursor, $val, $label) {
 		echo sprintf('%06d', $cursor).' | ';
 		echo implode(' ', str_split($val, 2));
@@ -110,6 +119,12 @@ class wdib {
 		return pack('H*', $out);
 	}
 	
+	/**
+	 * Compress binary data with LZ compression and output result
+	 *
+	 * @param binParser $bin file to be converted
+	 * @return string hex-encoded string
+	 */
 	static function createFromBMP(binParser $bin) {
 		$bin->rewind();
 		$out = binParser::LElong($bin->count());

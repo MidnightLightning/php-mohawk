@@ -1,4 +1,7 @@
 <?php
+/**
+ * "Splay out" a WDIB for debugging
+ */
 if (count($argv) < 2) exit("Need to specify an input data file\n");
 $src = $argv[1];
 if (!file_exists($src)) exit("Data file $src doesn't exist\n");
