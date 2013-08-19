@@ -19,6 +19,52 @@ class wdib {
 		$this->bin = $bin;
 	}
 	
+	function splay() {
+		$bin = $this->bin;
+		$bin->rewind();
+		
+		$hex = $bin->getHex(4);
+		$size = $bin->long();
+		$this->_hexOut(0, $hex, 'Size: '.number_format($size));
+		
+		$ring = new ringArray(self::CBUFFERSIZE);
+		$counter = 0;
+		while ($bin->key() < $bin->count()) {
+			$cmd = $bin->byte();
+			$this->_hexOut($bin->key()-1, sprintf('%02x', $cmd), 'Run header: '.sprintf('%08b', $cmd));
+			$cmd = $cmd | 0xff00;
+			while ($cmd & 0x100) {
+				if ($cmd & 1) {
+					// Absolute Byte
+					$b = $bin->byte();
+					$this->_hexOut($bin->key()-1, sprintf('%02x', $b), 'Pixel '.$counter.': Raw byte '.$b);
+					$counter++;
+					$ring->push($b);
+				} else {
+					// Ring Buffer lookup
+					// LLLLLLOO OOOOOOOO
+					$hex = $bin->getHex(2);
+					$b = $bin->short();
+					$length = ($b >> self::POS_BITS) + self::MIN_STRING;
+					$offset = ($b + self::MAX_STRING) & self::POS_MASK;
+					$this->_hexOut($bin->key()-2, $hex, 'Pixel '.$counter.': Ring Buffer offset '.$offset.' for '.$length);
+					for ($i = 0; $i<$length; $i++) {
+						$b = $ring->offsetGet($offset+$i);
+						$ring->push($b);
+						$counter++;
+					}
+				}
+				$cmd = $cmd >> 1;
+			}
+		}
+	}
+	
+	private function _hexOut($cursor, $val, $label) {
+		echo sprintf('%06d', $cursor).' | ';
+		echo implode(' ', str_split($val, 2));
+		echo ' ; '.$label."\n";
+	}
+	
 	/**
 	 * Parse the data stream and return an image
 	 * @return string binary representation of the WDIB contents (likely a BMP file)
@@ -68,8 +114,10 @@ class wdib {
 		$bin->rewind();
 		$out = binParser::LElong($bin->count());
 		$ring = new ringArray(self::CBUFFERSIZE);
+		$ticker = 0;
 		while ($bin->key() < $bin->count()) {
-			echo "Cursor at ".number_format($bin->key())." of ".number_format($bin->count())."...\n";
+			$ticker++;
+			if ($ticker % 100 == 0) echo "Cursor at ".number_format($bin->key())." of ".number_format($bin->count())."...\n";
 			$cmd = 0;
 			$place = 0;
 			$suffix = '';
@@ -77,12 +125,15 @@ class wdib {
 				// See if there's a match at least 3 bytes long
 				$found = false;
 				$binStr = $bin->getHex(3);
+				//echo "Searching for match for $binStr...";
 				$ringStr = $ring->toString();
 				$ringStr = $ringStr.$ringStr; // Double it, so the loop of it can be searched
+				$matches = array();
 				$start = 0;
 				while(true) {
 					$o = strpos($ringStr, $binStr, $start);
 					if ($o === false) break; // No match found
+					if ($o > self::CBUFFERSIZE*2) break; // Looped into next buffer
 					if ($o % 2 !== 0) {
 						$start = $o+1;
 						continue;
@@ -90,31 +141,45 @@ class wdib {
 					// Match found; see how long it is
 					$o = $o/2; // Convert offset to bytes, not hex nibbles
 					$found = true;
-					$place++;
 					$l = 4;
 					while($l <= self::MAX_STRING) {
 						if ($bin->getHex($l) !== substr($ringStr, $o*2, $l*2)) break;
 						$l++;
 					}
 					$l--;
-					echo "Match found at $o for $l bytes\n";
+					//echo "Match found at $o for $l bytes\n";
+					$matches[] = array('start' => $o, 'length' => $l);
+					$start = ($o+1)*2;
+				}
+				if ($found === true) {
+					// Look for longest match
+					//echo "Longest match is: ";
+					usort($matches, function($a, $b) {
+						if ($a['length'] == $b['length']) return $a['start'] - $b['start'];
+						return $a['length'] - $a['length']; // Sort largest length to the bottom
+					});
+					$m = array_pop($matches); // Grab the longest one
+					$o = $m['start'];
+					$l = $m['length'];
+					//echo "$o for $l bytes\n";
+					
 					$o = $o - self::MAX_STRING;
 					if ($o < 0) $o += self::CBUFFERSIZE;
 					$suffix .= sprintf('%04X', (($l - self::MIN_STRING) << self::POS_BITS) | $o);
 					for ($i=0; $i<$l; $i++) { // Add those bytes to the ring
 						$ring->push($bin->byte());
 					}
-					break;
-				}
-				if ($found === false) {
-					// Use absolute byte
-					$b = $bin->byte();
-					//echo "\nNo match found; using absolute byte for $b.\n";
-					$cmd = $cmd | (1 << $place); // Set place to 1
 					$place++;
-					$suffix .= sprintf('%02X', $b);
-					$ring->push($b);
+					continue;
 				}
+				// Use absolute byte
+				$b = $bin->byte();
+				//echo "No match found; using absolute byte for $b at place $place.\n";
+				$cmd = $cmd | (1 << $place); // Set place to 1
+				$place++;
+				$suffix .= sprintf('%02X', $b);
+				$ring->push($b);
+				
 				if ($bin->key() >= $bin->count()) {
 					// Out of data to convert
 					while (!($cmd & 0x8000)) {
@@ -123,7 +188,7 @@ class wdib {
 				}
 			}
 			$out .= sprintf('%02X', $cmd & 0xff) . $suffix;
-			//if ($bin->key() > 100) break;
+			//if ($bin->key() > 1300) break;
 		}
 		return $out;
 	}

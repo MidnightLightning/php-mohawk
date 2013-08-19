@@ -68,7 +68,7 @@ class binParser implements SeekableIterator, Countable {
 	 * @return string Hex string of bytes
 	 */
 	public function getHex($bytes = 1) {
-		return substr($this->bin, $this->cursor*2, $bytes*2);
+		return strtoupper(substr($this->bin, $this->cursor*2, $bytes*2));
 	}
 	
 	/**
