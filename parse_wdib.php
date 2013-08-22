@@ -33,6 +33,7 @@ $im_bmp = $r->convert(); // Extract the BMP data
 
 if ($format == 'bmp') {
 	file_put_contents($dir['dirname'].'/'.$dir['filename'].'.bmp', $im_bmp); // Save as BMP
+	echo "Done\n";
 	exit;
 }
 

@@ -106,7 +106,7 @@ class wdib {
 					$offset = ($b + self::MAX_STRING) & self::POS_MASK;
 					for ($i = 0; $i<$length; $i++) {
 						$b = $ring->offsetGet($offset+$i);
-						//echo ($offset+$i)." ($b))... ";
+						//echo ($offset+$i)." ($b))... \n";
 						$out .= sprintf('%02X', $b);
 						$ring->push($b);
 					}
@@ -140,54 +140,58 @@ class wdib {
 				// See if there's a match at least 3 bytes long
 				$found = false;
 				$binStr = $bin->getHex(3);
-				//echo "Searching for match for $binStr...";
+				//echo "Searching for match for $binStr...\n";
 				$ringStr = $ring->toString();
 				$ringStr = $ringStr.$ringStr; // Double it, so the loop of it can be searched
 				$matches = array();
 				$start = 0;
-				while(true) {
+				$match_o = 0;
+				$match_l = 0;
+				while(strlen($binStr) >= 6) {
 					$o = strpos($ringStr, $binStr, $start);
 					if ($o === false) break; // No match found
+					if ($o/2 < $ring->key() && $o/2+3 >= $ring->key()) { // Overlaps the ring cursor; just skip, rather than deal with this complexity
+						$start = $o+2;
+						continue;
+					}
 					if ($o > self::CBUFFERSIZE*2) break; // Looped into next buffer
 					if ($o % 2 !== 0) {
 						$start = $o+1;
 						continue;
 					}
 					// Match found; see how long it is
-					$o = $o/2; // Convert offset to bytes, not hex nibbles
-					$found = true;
 					$l = 4;
-					while($l <= self::MAX_STRING) {
-						if ($bin->getHex($l) !== substr($ringStr, $o*2, $l*2)) break;
+					while($l < self::MAX_STRING) {
+						if ($o/2 < $ring->key() && $o/2+$l >= $ring->key()) break;
+						if ($bin->getHex($l) !== substr($ringStr, $o, $l*2)) break;
 						$l++;
 					}
 					$l--;
-					//echo "Match found at $o for $l bytes\n";
-					$matches[] = array('start' => $o, 'length' => $l);
-					$start = ($o+1)*2;
+					if ($l > $match_l) {
+						//echo "Match found at $o for $l bytes: ".$bin->getHex($l)." = ".substr($ringStr, $o, $l*2)."\n";
+						$found = true;
+						$match_o = $o/2;
+						$match_l = $l;
+					}
+					$start = $o+$l*2;
 				}
 				if ($found === true) {
-					// Look for longest match
-					//echo "Longest match is: ";
-					usort($matches, function($a, $b) {
-						if ($a['length'] == $b['length']) return $a['start'] - $b['start'];
-						return $a['length'] - $a['length']; // Sort largest length to the bottom
-					});
-					$m = array_pop($matches); // Grab the longest one
-					$o = $m['start'];
-					$l = $m['length'];
-					//echo "$o for $l bytes\n";
+					$o = $match_o;
+					$l = $match_l;
+					//echo "Longest match is: $match_o for $match_l bytes\n";
 					
 					$o = $o - self::MAX_STRING;
 					if ($o < 0) $o += self::CBUFFERSIZE;
 					$suffix .= sprintf('%04X', (($l - self::MIN_STRING) << self::POS_BITS) | $o);
 					for ($i=0; $i<$l; $i++) { // Add those bytes to the ring
-						$ring->push($bin->byte());
+						$b = $bin->byte();
+						$ring->push($b);
 					}
 					$place++;
 					continue;
 				}
 				// Use absolute byte
+				//echo "None found\n";
 				$b = $bin->byte();
 				//echo "No match found; using absolute byte for $b at place $place.\n";
 				$cmd = $cmd | (1 << $place); // Set place to 1
@@ -197,9 +201,7 @@ class wdib {
 				
 				if ($bin->key() >= $bin->count()) {
 					// Out of data to convert
-					while (!($cmd & 0x8000)) {
-						$cmd = $cmd << 1; // Add zeroes to the end
-					}
+					break;
 				}
 			}
 			$out .= sprintf('%02X', $cmd & 0xff) . $suffix;
