@@ -2,13 +2,15 @@
 /**
  * Take a WDIB file, and insert it into a MOHAWK file, replacing a given Resource ID
  *
- * Usage: php insert_wdib.php [Path to MHK File] [Resource ID number] [Path to WDIB file]
+ * Usage: php insert_wdib.php [Path to MHK File] [Resource ID number] [Path to WDIB file] [ScummVM?]
  */
+ini_set('memory_limit', '512M');
 
 if (count($argv) < 4) exit("Not enough arguments given\n");
 $mhk = $argv[1];
 $rs_id = intval($argv[2]);
 $wdib = $argv[3];
+$scumm = (count($argv) >= 5 && $argv[4] == 'scumm')? true : false; // Make this file compatible with ScummVM?
 if (!file_exists($mhk)) exit("Mohawk file $mhk doesn't exist\n");
 if (!file_exists($wdib)) exit("WDIB file $wdib doesn't exist\n");
 if ($rs_id < 0) exit("Invalid Resource ID $rs_id\n");
@@ -64,7 +66,12 @@ echo "Updating Resource $rs_id binary offset to ".($file_size+8)." and size to {
 // Rebuild the Mohawk file
 $fh = fopen($outfile, 'w');
 fwrite($fh, pack('H*', substr($mhk->bin, 0, 8))); // MHWK header
-fwrite($fh, pack('H*', sprintf('%08X', $file_size+$rs['size']))); // File size
+if ($scumm) {
+	echo "Keeping file length the same, to appease ScummVM\n";
+	fwrite($fh, pack('H*', sprintf('%08X', $file_size))); // File size
+} else {
+	fwrite($fh, pack('H*', sprintf('%08X', $file_size+$rs['size']))); // File size
+}
 fwrite($fh, pack('H*', substr($mhk->bin, 16, $rs_offset*2-16))); // Clone data, up to Resource in question
 fwrite($fh, pack('H*', sprintf('%08X', $file_size+8))); // Binary location is now at the end of what the file was
 fwrite($fh, pack('H*', sprintf('%04X', $rs['size'])));
